@@ -1,75 +1,156 @@
+<?php
+session_start();
+require_once 'db.php';
+
+if (!isset($_SESSION['student_id'])) {
+    header("Location: welcome.php");
+    exit;
+}
+
+if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
+    die("Invalid book ID");
+}
+
+$book_id = intval($_GET['id']);
+$student_id = $_SESSION['student_id'];
+
+$sql = "SELECT   b.book_id, b.title, b.subtitle, b.isbn, b.publisher,
+    b.edition, b.language, b.publication_year, b.pages, b.summary, b.description, c.category_name,
+    COALESCE(GROUP_CONCAT(DISTINCT a.author_name SEPARATOR ', '), 'Unknown') AS authors,
+    COUNT(CASE WHEN bc.status = 'available' THEN 1 END) AS available_copies
+FROM books b
+JOIN book_categories c ON b.category_id = c.category_id
+LEFT JOIN book_authors ba ON b.book_id = ba.book_id
+LEFT JOIN authors a ON ba.author_id = a.author_id
+LEFT JOIN book_copies bc ON b.book_id = bc.book_id
+WHERE b.book_id = ?
+GROUP BY b.book_id";
+
+$stmt = $conn->prepare($sql);
+$stmt->bind_param("i", $book_id);
+$stmt->execute();
+$result = $stmt->get_result();
+
+if ($result->num_rows === 0) {
+    die("Book not found");
+}
+
+$book = $result->fetch_assoc();
+
+// 🔹 Optional: set borrowing dates (2 weeks from now)
+$today = date("Y-m-d");
+$due_date = date("Y-m-d", strtotime("+2 weeks"));
+?>
+
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Book Information</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Book Information - <?php echo htmlspecialchars($book['title']); ?></title>
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-
-  <link rel="stylesheet" href="bookdetails.css">
+<link rel="stylesheet" href="bookdetails.css">
 </head>
 
 <body>
 
-  <main class="screen">
+<main class="screen">
 
-    <h1 class="title">Book Information</h1>
+<h1 class="title">Book Information</h1>
 
-    <section class="info-card">
-      <div class="row">
+<section class="info-card">
+
+    <div class="row">
         <div class="label">Book Title -</div>
-        <div class="value">Book #1</div>
-      </div>
-
-      <div class="row">
-        <div class="label">Author -</div>
-        <div class="value">Author #1</div>
-      </div>
-
-      <div class="row">
-        <div class="label">Category -</div>
-        <div class="value">Category #1</div>
-      </div>
-
-      <div class="row">
-        <div class="label">Publisher -</div>
-        <div class="value">Publisher #1</div>
-      </div>
-
-      <div class="row">
-        <div class="label">Current Date -</div>
-        <div class="value">2026-02-01</div>
-      </div>
-
-      <div class="row">
-        <div class="label">Return Date -</div>
-        <div class="value">Current Date + 2 Weeks</div>
-      </div>
-    </section>
-
-    <div class="actions">
--->
-      <button
-        class="btn btn-back"
-        type="button"
-        onclick="window.location.href='bscanescreen.html'">
-        Go Back
-      </button>
-
-      <button
-        class="btn btn-confirm"
-        type="button"
-        onclick="window.location.href='#'">
-        Confirm
-      </button>
+        <div class="value"><?php echo htmlspecialchars($book['title']); ?></div>
     </div>
 
-  </main>
+    <div class="row">
+        <div class="label">Subtitle -</div>
+        <div class="value"><?php echo htmlspecialchars($book['subtitle']); ?></div>
+    </div>
 
-  
+    <div class="row">
+        <div class="label">Author(s) -</div>
+        <div class="value"><?php echo htmlspecialchars($book['authors']); ?></div>
+    </div>
+
+    <div class="row">
+        <div class="label">Category -</div>
+        <div class="value"><?php echo htmlspecialchars($book['category_name']); ?></div>
+    </div>
+
+    <div class="row">
+        <div class="label">Publisher -</div>
+        <div class="value"><?php echo htmlspecialchars($book['publisher']); ?></div>
+    </div>
+
+    <div class="row">
+        <div class="label">Edition -</div>
+        <div class="value"><?php echo htmlspecialchars($book['edition']); ?></div>
+    </div>
+
+    <div class="row">
+        <div class="label">Language -</div>
+        <div class="value"><?php echo htmlspecialchars($book['language']); ?></div>
+    </div>
+
+    <div class="row">
+        <div class="label">Publication Year -</div>
+        <div class="value"><?php echo htmlspecialchars($book['publication_year']); ?></div>
+    </div>
+
+    <div class="row">
+        <div class="label">Pages -</div>
+        <div class="value"><?php echo htmlspecialchars($book['pages']); ?></div>
+    </div>
+
+    <div class="row">
+        <div class="label">ISBN -</div>
+        <div class="value"><?php echo htmlspecialchars($book['isbn']); ?></div>
+    </div>
+
+    <div class="row">
+        <div class="label">Summary -</div>
+        <div class="value"><?php echo htmlspecialchars($book['summary']); ?></div>
+    </div>
+
+    <div class="row">
+        <div class="label">Description -</div>
+        <div class="value"><?php echo nl2br(htmlspecialchars($book['description'])); ?></div>
+    </div>
+
+    <div class="row">
+        <div class="label">Available Copies -</div>
+        <div class="value"><?php echo $book['available_copies']; ?></div>
+    </div>
+
+    <div class="row">
+        <div class="label">Current Date -</div>
+        <div class="value"><?php echo $today; ?></div>
+    </div>
+
+    <div class="row">
+        <div class="label">Return Date -</div>
+        <div class="value"><?php echo $due_date; ?></div>
+    </div>
+
+</section>
+
+<div class="actions">
+    <button class="btn btn-back" type="button" onclick="window.history.back();">Go Back</button>
+
+    <?php if ($book['available_copies'] > 0): ?>
+        <form method="POST" action="borrow.php" style="display:inline;">
+            <input type="hidden" name="book_id" value="<?php echo $book['book_id']; ?>">
+            <button class="btn btn-confirm" type="submit">Confirm Borrow</button>
+        </form>
+    <?php else: ?>
+        <button class="btn btn-confirm" type="button" disabled>No Copies Available</button>
+    <?php endif; ?>
+</div>
+
+</main>
 
 </body>
 </html>

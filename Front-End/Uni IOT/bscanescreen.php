@@ -45,7 +45,7 @@
     </section>
 
     <footer class="panel__footer panel__footer--scan">
-      <a class="btn back" href="SelectOption.html">Go Back</a>
+      <a class="btn back" href="SelectOption.php">Go Back</a>
       <div class="hint">Tap the book / scan area to continue</div>
     </footer>
   </main>
