@@ -1,3 +1,25 @@
+<?php
+session_start();
+
+if (!isset($_SESSION['student_id'])) {
+    header("Location: index.php");
+    exit;
+}
+
+$error = "";
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $book_id = trim($_POST['book_id'] ?? "");
+
+    if (!empty($book_id) && is_numeric($book_id)) {
+        header("Location: borrow.php?id=" . intval($book_id));
+        exit;
+    } else {
+        $error = "Invalid Book ID";
+    }
+}
+?>
+
 <!doctype html>
 <html lang="en">
 <head>
@@ -33,7 +55,6 @@
       <h1 class="scan-title">Tap a book to scan</h1>
 
       <div class="scan-box" role="img" aria-label="Scan illustration">
-        
         <div class="scan-placeholder">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
             <path d="M7 3h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/>
@@ -42,6 +63,21 @@
           <p>Add Scan Image</p>
         </div>
       </div>
+
+      <form class="scan-form" method="POST">
+        <input
+          type="text"
+          name="book_id"
+          placeholder="Enter / Scan Book ID"
+          autocomplete="off"
+          autofocus
+        >
+        <button class="btn btn--scan" type="submit">Scan</button>
+      </form>
+
+      <?php if (!empty($error)): ?>
+        <div class="scan-error"><?php echo htmlspecialchars($error); ?></div>
+      <?php endif; ?>
     </section>
 
     <footer class="panel__footer panel__footer--scan">

@@ -138,6 +138,46 @@ body{
   font-weight: 700;
 }
 
+.scan-form{
+  margin: 18px auto 0;
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.scan-form input{
+  width: min(260px, 100%);
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 14px;
+  outline: none;
+}
+
+.scan-form input:focus{
+  border-color: rgba(29,78,216,0.35);
+  box-shadow: 0 0 0 4px rgba(29,78,216,0.10);
+}
+
+.btn--scan{
+  color: var(--primary);
+  background-color: rgba(29,78,216,0.10);
+  border-color: rgba(29,78,216,0.20);
+}
+
+.btn--scan:hover{
+  background-color: rgba(29,78,216,0.15);
+  box-shadow: 0 10px 26px rgba(29,78,216,0.12);
+}
+
+.scan-error{
+  margin-top: 12px;
+  color: var(--danger);
+  font-weight: 600;
+}
+
 .panel__footer{
   padding: 16px 18px;
   border-top: 1px solid var(--border);

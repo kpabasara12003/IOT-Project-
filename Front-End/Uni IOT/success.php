@@ -38,11 +38,11 @@
       <p class="question">Borrow another Book?</p>
 
       <div class="actions">
-        <button class="btn btn--borrow" type="button" onclick="window.location.href='sd.html'">
+        <button class="btn btn--borrow" type="button" onclick="window.location.href='bscanescreen.php'">
           Borrow
         </button>
 
-        <button class="btn btn--done" type="button" onclick="window.location.href='index.html'">
+        <button class="btn btn--done" type="button" onclick="window.location.href='index.php'">
           Done
         </button>
       </div>

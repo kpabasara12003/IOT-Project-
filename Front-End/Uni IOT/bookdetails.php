@@ -141,10 +141,10 @@ $due_date = date("Y-m-d", strtotime("+2 weeks"));
     <button class="btn btn-back" type="button" onclick="window.history.back();">Go Back</button>
 
     <?php if ($book['available_copies'] > 0): ?>
-        <form method="POST" action="borrow.php" style="display:inline;">
-            <input type="hidden" name="book_id" value="<?php echo $book['book_id']; ?>">
-            <button class="btn btn-confirm" type="submit">Confirm Borrow</button>
-        </form>
+        <button class="btn btn-confirm" type="button"
+          onclick="window.location.href='borrow.php?id=<?php echo $book['book_id']; ?>'">
+          Proceed to Confirm
+        </button>
     <?php else: ?>
         <button class="btn btn-confirm" type="button" disabled>No Copies Available</button>
     <?php endif; ?>
