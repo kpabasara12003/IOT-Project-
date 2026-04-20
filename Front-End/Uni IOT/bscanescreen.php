@@ -11,8 +11,8 @@ $error = "";
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $book_id = trim($_POST['book_id'] ?? "");
 
-    if (!empty($book_id) && is_numeric($book_id)) {
-        header("Location: borrow.php?id=" . intval($book_id));
+    if (!empty($book_id)) {
+        header("Location: borrow.php?id=" . urlencode($book_id));
         exit;
     } else {
         $error = "Invalid Book ID";

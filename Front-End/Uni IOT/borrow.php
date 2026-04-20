@@ -8,35 +8,33 @@ if (!isset($_SESSION['student_id'])) {
 }
 
 $student_id = $_SESSION['student_id'];
-$book_id = null;
+$nfc_uid = null;
 
 if (isset($_POST['book_id'])) {
-    $book_id = $_POST['book_id'];
+    $nfc_uid = $_POST['book_id'];
 } elseif (isset($_GET['id'])) {
-    $book_id = $_GET['id'];
+    $nfc_uid = $_GET['id'];
 }
 
-if (!$book_id || !is_numeric($book_id)) {
+if (empty($nfc_uid)) {
     die("Invalid book ID");
 }
 
-$book_id = intval($book_id);
 $error = "";
 $success = false;
 
-$book_sql = "SELECT b.book_id, b.title, c.category_name,
-    COALESCE(GROUP_CONCAT(DISTINCT a.author_name SEPARATOR ', '), 'Unknown') AS authors,
-    COUNT(CASE WHEN bc.status = 'available' THEN 1 END) AS available_copies
-FROM books b
+$book_sql = "SELECT b.book_id, b.title, c.category_name, bc.copy_id, bc.status,
+    COALESCE(GROUP_CONCAT(DISTINCT a.author_name SEPARATOR ', '), 'Unknown') AS authors
+FROM book_copies bc
+JOIN books b ON bc.book_id = b.book_id
 JOIN book_categories c ON b.category_id = c.category_id
 LEFT JOIN book_authors ba ON b.book_id = ba.book_id
 LEFT JOIN authors a ON ba.author_id = a.author_id
-LEFT JOIN book_copies bc ON b.book_id = bc.book_id
-WHERE b.book_id = ?
-GROUP BY b.book_id";
+WHERE bc.nfc_uid = ?
+GROUP BY b.book_id, bc.copy_id";
 
 $book_stmt = $conn->prepare($book_sql);
-$book_stmt->bind_param("i", $book_id);
+$book_stmt->bind_param("s", $nfc_uid);
 $book_stmt->execute();
 $book_result = $book_stmt->get_result();
 
@@ -46,21 +44,13 @@ if ($book_result->num_rows === 0) {
 
 $book = $book_result->fetch_assoc();
 
-$copy_id = null;
-$copy_stmt = $conn->prepare("SELECT copy_id FROM book_copies WHERE book_id = ? AND status = 'available' LIMIT 1");
-$copy_stmt->bind_param("i", $book_id);
-$copy_stmt->execute();
-$copy_result = $copy_stmt->get_result();
-
-if ($copy_row = $copy_result->fetch_assoc()) {
-    $copy_id = $copy_row['copy_id'];
-}
+$copy_id = $book['copy_id'];
+$can_borrow = ($book['status'] === 'available');
 
 $borrowed_at = date("Y-m-d H:i:s");
 $due_date = date("Y-m-d", strtotime("+2 weeks"));
 
 $confirm_action = isset($_POST['confirm']) && $_POST['confirm'] === '1';
-$can_borrow = $copy_id !== null;
 
 if ($confirm_action && $can_borrow) {
     $insert_sql = "INSERT INTO borrows (copy_id, student_id, borrowed_at, due_date, returned_at)
@@ -119,7 +109,7 @@ if ($confirm_action && $can_borrow) {
       <?php endif; ?>
 
       <?php if (!$can_borrow): ?>
-        <div class="alert alert--warn">No available copies right now.</div>
+        <div class="alert alert--warn">This specific copy is not available right now.</div>
       <?php endif; ?>
 
       <div class="summary-card">
@@ -175,7 +165,7 @@ if ($confirm_action && $can_borrow) {
       </div>
 
       <form method="POST" class="actions">
-        <input type="hidden" name="book_id" value="<?php echo $book_id; ?>">
+        <input type="hidden" name="book_id" value="<?php echo htmlspecialchars($nfc_uid); ?>">
         <input type="hidden" name="confirm" value="1">
         <button class="btn btn--confirm" type="submit" <?php echo $can_borrow ? '' : 'disabled'; ?>>
           Confirm Borrowing
