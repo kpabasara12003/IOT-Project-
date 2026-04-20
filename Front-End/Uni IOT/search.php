@@ -12,12 +12,19 @@ $results = null;
 
 
   $sql = "SELECT  b.book_id, b.title, c.category_name, COALESCE(GROUP_CONCAT(DISTINCT a.author_name SEPARATOR ', '), 'Unknown') AS authors,
-      COUNT(CASE WHEN bc.status = 'available' THEN 1 END) AS available_copies
+      (
+        SELECT COUNT(*)
+        FROM book_copies bc2
+        LEFT JOIN borrows br2
+          ON br2.copy_id = bc2.copy_id
+         AND br2.returned_at IS NULL
+        WHERE bc2.book_id = b.book_id
+          AND br2.copy_id IS NULL
+      ) AS available_copies
   FROM books b
   JOIN book_categories c ON b.category_id = c.category_id
   LEFT JOIN book_authors ba ON b.book_id = ba.book_id
-  LEFT JOIN authors a ON ba.author_id = a.author_id
-  LEFT JOIN book_copies bc ON b.book_id = bc.book_id";
+  LEFT JOIN authors a ON ba.author_id = a.author_id";
 
 if (isset($_GET['search']) && $_GET['search'] !== "") {
 

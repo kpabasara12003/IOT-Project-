@@ -12,10 +12,13 @@ $book_id = null;
 
 if (isset($_POST['book_id'])) {
     $book_id = $_POST['book_id'];
+    $book_id = $_POST['book_id'];
 } elseif (isset($_GET['id'])) {
+    $book_id = $_GET['id'];
     $book_id = $_GET['id'];
 }
 
+if (!$book_id || !is_numeric($book_id)) {
 if (!$book_id || !is_numeric($book_id)) {
     die("Invalid book ID");
 }
@@ -36,6 +39,7 @@ WHERE b.book_id = ?
 GROUP BY b.book_id";
 
 $book_stmt = $conn->prepare($book_sql);
+$book_stmt->bind_param("i", $book_id);
 $book_stmt->bind_param("i", $book_id);
 $book_stmt->execute();
 $book_result = $book_stmt->get_result();
@@ -69,13 +73,21 @@ if ($confirm_action && $can_borrow) {
     $insert_stmt->bind_param("iiss", $copy_id, $student_id, $borrowed_at, $due_date);
 
     if ($insert_stmt->execute()) {
-        $update_stmt = $conn->prepare("UPDATE book_copies SET status = 'borrowed' WHERE copy_id = ?");
-        $update_stmt->bind_param("i", $copy_id);
-        $update_stmt->execute();
+        unset($_SESSION['borrow_entrypoint']);
         header("Location: success.php");
         exit;
+    }
+
+    $error = "Unable to confirm borrowing. Please try again.";
+} elseif ($confirm_action && !$can_borrow) {
+    if ($credit_limit_reached) {
+        $error = "Credit total exceeded (over $credit_limit). Student cannot borrow books.";
+    } elseif ($borrow_limit_reached) {
+        $error = "Borrow limit reached (max $borrow_limit books). Return a book to borrow again.";
+    } elseif (!$copy_id) {
+        $error = "No available copies right now.";
     } else {
-        $error = "Unable to confirm borrowing. Please try again.";
+        $error = "Unable to confirm borrowing right now.";
     }
 }
 ?>
@@ -105,14 +117,14 @@ if ($confirm_action && $can_borrow) {
         </svg>
       </div>
 
-      <button class="btn btn--backTop" type="button" onclick="window.history.back();">
+      <button class="btn btn--backTop" type="button" onclick="window.location.href='bscanescreen.php';">
         Go Back
       </button>
     </header>
 
     <section class="panel__body">
       <h1 class="title">Confirm Borrowing</h1>
-      <p class="subtitle">NFC reader connected via USB. Tap the book to verify before confirming.</p>
+      <p class="subtitle">Tap the book to verify before confirming.</p>
 
       <?php if (!empty($error)): ?>
         <div class="alert alert--error"><?php echo htmlspecialchars($error); ?></div>
@@ -137,41 +149,16 @@ if ($confirm_action && $can_borrow) {
         </div>
         <div class="summary-row">
           <span>Student ID</span>
-          <strong><?php echo htmlspecialchars($student_id); ?></strong>
+          <strong><?php echo htmlspecialchars((string)$student_id); ?></strong>
         </div>
         <div class="summary-row">
           <span>Copy ID</span>
-          <strong><?php echo $copy_id ? htmlspecialchars($copy_id) : "N/A"; ?></strong>
+          <strong><?php echo $copy_id ? htmlspecialchars((string)$copy_id) : "N/A"; ?></strong>
         </div>
         <div class="summary-row">
           <span>Due Date</span>
-          <strong><?php echo $due_date; ?></strong>
+          <strong><?php echo htmlspecialchars($due_date); ?></strong>
         </div>
-      </div>
-
-      <div class="table-wrap">
-        <table class="table">
-          <thead>
-            <tr>
-              <th>Borrow ID</th>
-              <th>Copy ID</th>
-              <th>Student ID</th>
-              <th>Borrowed At</th>
-              <th>Due Date</th>
-              <th>Returned At</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>Auto</td>
-              <td><?php echo $copy_id ? htmlspecialchars($copy_id) : "N/A"; ?></td>
-              <td><?php echo htmlspecialchars($student_id); ?></td>
-              <td><?php echo $borrowed_at; ?></td>
-              <td><?php echo $due_date; ?></td>
-              <td>NULL</td>
-            </tr>
-          </tbody>
-        </table>
       </div>
 
       <form method="POST" class="actions">
