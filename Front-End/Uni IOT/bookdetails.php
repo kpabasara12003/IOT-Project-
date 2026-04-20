@@ -17,12 +17,19 @@ $student_id = $_SESSION['student_id'];
 $sql = "SELECT   b.book_id, b.title, b.subtitle, b.isbn, b.publisher,
     b.edition, b.language, b.publication_year, b.pages, b.summary, b.description, c.category_name,
     COALESCE(GROUP_CONCAT(DISTINCT a.author_name SEPARATOR ', '), 'Unknown') AS authors,
-    COUNT(CASE WHEN bc.status = 'available' THEN 1 END) AS available_copies
+    (
+      SELECT COUNT(*)
+      FROM book_copies bc2
+      LEFT JOIN borrows br2
+        ON br2.copy_id = bc2.copy_id
+       AND br2.returned_at IS NULL
+      WHERE bc2.book_id = b.book_id
+        AND br2.copy_id IS NULL
+    ) AS available_copies
 FROM books b
 JOIN book_categories c ON b.category_id = c.category_id
 LEFT JOIN book_authors ba ON b.book_id = ba.book_id
 LEFT JOIN authors a ON ba.author_id = a.author_id
-LEFT JOIN book_copies bc ON b.book_id = bc.book_id
 WHERE b.book_id = ?
 GROUP BY b.book_id";
 
@@ -139,15 +146,6 @@ $due_date = date("Y-m-d", strtotime("+2 weeks"));
 
 <div class="actions">
     <button class="btn btn-back" type="button" onclick="window.history.back();">Go Back</button>
-
-    <?php if ($book['available_copies'] > 0): ?>
-        <button class="btn btn-confirm" type="button"
-          onclick="window.location.href='borrow.php?id=<?php echo $book['book_id']; ?>'">
-          Proceed to Confirm
-        </button>
-    <?php else: ?>
-        <button class="btn btn-confirm" type="button" disabled>No Copies Available</button>
-    <?php endif; ?>
 </div>
 
 </main>

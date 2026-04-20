@@ -16,7 +16,6 @@
   <main class="panel">
     <header class="panel__header">
       <div class="logo" aria-hidden="true">
-       
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
           <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
           <path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5z" />
@@ -27,7 +26,6 @@
 
     <section class="panel__body">
       <div class="badge" aria-hidden="true">
-       
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M20 6L9 17l-5-5" />
         </svg>
@@ -42,7 +40,7 @@
           Borrow
         </button>
 
-        <button class="btn btn--done" type="button" onclick="window.location.href='index.php'">
+        <button class="btn btn--done" type="button" onclick="window.location.href='SelectOption.php'">
           Done
         </button>
       </div>
@@ -50,3 +48,4 @@
   </main>
 </body>
 </html>
+

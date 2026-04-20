@@ -41,7 +41,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <header class="panel__header panel__header--simple">
       <div class="brand">
         <div class="logo" aria-hidden="true">
-    
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
             <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
             <path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5z" />
@@ -87,3 +86,4 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   </main>
 </body>
 </html>
+

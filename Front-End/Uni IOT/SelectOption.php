@@ -51,7 +51,7 @@ $student_name = $_SESSION['student_name'];
 
         <button
           class="btn btn--return"
-          onclick="window.location.href='return.php'">
+          onclick="window.location.href='return_books.php'">
           Return
         </button>
 
