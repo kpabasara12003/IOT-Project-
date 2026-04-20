@@ -15,11 +15,8 @@ $results = null;
       (
         SELECT COUNT(*)
         FROM book_copies bc2
-        LEFT JOIN borrows br2
-          ON br2.copy_id = bc2.copy_id
-         AND br2.returned_at IS NULL
         WHERE bc2.book_id = b.book_id
-          AND br2.copy_id IS NULL
+          AND LOWER(bc2.status) = 'available'
       ) AS available_copies
   FROM books b
   JOIN book_categories c ON b.category_id = c.category_id

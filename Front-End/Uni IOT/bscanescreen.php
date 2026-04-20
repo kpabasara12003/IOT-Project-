@@ -9,13 +9,15 @@ if (!isset($_SESSION['student_id'])) {
 $error = "";
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $book_id = trim($_POST['book_id'] ?? "");
+    $scan_value = trim($_POST['book_id'] ?? "");
 
-    if (!empty($book_id)) {
-        header("Location: borrow.php?id=" . urlencode($book_id));
+    if ($scan_value !== "") {
+        // Allow borrowing only via the Scan & Borrow flow
+        $_SESSION['borrow_entrypoint'] = 'scan';
+        header("Location: borrow.php?id=" . rawurlencode($scan_value));
         exit;
     } else {
-        $error = "Invalid Book ID";
+        $error = "Invalid scan value";
     }
 }
 ?>
