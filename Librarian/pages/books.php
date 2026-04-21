@@ -2,6 +2,7 @@
 include('../config/db.php');
 include('../components/auth_check.php');
 
+
 if (isset($_POST['add_book'])) {
     $title = $_POST['title'];
     $subtitle = $_POST['subtitle'];
@@ -14,47 +15,66 @@ if (isset($_POST['add_book'])) {
     $summary = $_POST['summary'];
     $description = $_POST['description'];
     $category_id = $_POST['category_id'];
-    
-   
-    $author_id = $_POST['author_id'];
+    $author_id = $_POST['author_id']; 
     $row_id = $_POST['row_id'];
     $nfc_uid = $_POST['nfc_uid'];
 
     
-    $stmt1 = $conn->prepare("INSERT INTO books (title, subtitle, isbn, publisher, edition, language, publication_year, pages, summary, description, category_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-    $stmt1->bind_param("ssssssisssi", $title, $subtitle, $isbn, $publisher, $edition, $language, $publication_year, $pages, $summary, $description, $category_id);
-    $stmt1->execute();
-    $book_id = $stmt1->insert_id;
+    $check_isbn = $conn->prepare("SELECT book_id FROM books WHERE isbn = ?");
+    $check_isbn->bind_param("s", $isbn);
+    $check_isbn->execute();
+    $res = $check_isbn->get_result();
 
-   
-    if (!empty($author_id)) {
-        $stmt2 = $conn->prepare("INSERT INTO book_authors (book_id, author_id) VALUES (?, ?)");
-        $stmt2->bind_param("ii", $book_id, $author_id);
-        $stmt2->execute();
+    if ($res->num_rows > 0) {
+        
+        $book_data = $res->fetch_assoc();
+        $book_id = $book_data['book_id'];
+    } else {
+       
+        $stmt1 = $conn->prepare("INSERT INTO books (title, subtitle, isbn, publisher, edition, language, publication_year, pages, summary, description, category_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt1->bind_param("ssssssisssi", $title, $subtitle, $isbn, $publisher, $edition, $language, $publication_year, $pages, $summary, $description, $category_id);
+        $stmt1->execute();
+        $book_id = $stmt1->insert_id;
+
+        
+        if (!empty($author_id)) {
+            $stmt2 = $conn->prepare("INSERT INTO book_authors (book_id, author_id) VALUES (?, ?)");
+            $stmt2->bind_param("ii", $book_id, $author_id);
+            $stmt2->execute();
+        }
     }
 
+    
     $stmt3 = $conn->prepare("INSERT INTO book_copies (book_id, row_id, nfc_uid) VALUES (?, ?, ?)");
     $stmt3->bind_param("iis", $book_id, $row_id, $nfc_uid);
-    $stmt3->execute();
-
-    echo "<script>alert('New Book and NFC Copy Registered Successfully!'); window.location='books.php';</script>";
+    
+    if ($stmt3->execute()) {
+        echo "<script>alert('Record updated successfully!'); window.location='books.php';</script>";
+    } else {
+        echo "<script>alert('Error: NFC UID already exists in system.');</script>";
+    }
 }
+
 
 if (isset($_POST['make_copy'])) {
     $book_id = $_POST['existing_book_id'];
     $row_id = $_POST['row_id'];
     $nfc_uid = $_POST['nfc_uid'];
 
-    $stmt = $conn->prepare("INSERT INTO book_copies (book_id, row_id, nfc_uid) VALUES (?, ?, ?)");
-    $stmt->bind_param("iis", $book_id, $row_id, $nfc_uid);
-    $stmt->execute();
+    $stmt_copy = $conn->prepare("INSERT INTO book_copies (book_id, row_id, nfc_uid) VALUES (?, ?, ?)");
+    $stmt_copy->bind_param("iis", $book_id, $row_id, $nfc_uid);
 
-    echo "<script>alert('Additional Copy Added Successfully!'); window.location='books.php';</script>";
+    if ($stmt_copy->execute()) {
+        echo "<script>alert('Extra copy added successfully'); window.location='books.php';</script>";
+    } else {
+        echo "<script>alert('Error: Duplicate NFC UID.');</script>";
+    }
 }
 
 
 if (isset($_GET['delete_copy'])) {
     $id = $_GET['delete_copy'];
+    // Delete history first to avoid SQL Foreign Key constraint errors
     $stmt_history = $conn->prepare("DELETE FROM borrows WHERE copy_id = ?");
     $stmt_history->bind_param("i", $id);
     $stmt_history->execute();
@@ -65,6 +85,7 @@ if (isset($_GET['delete_copy'])) {
 
     echo "<script>window.location='books.php';</script>";
 }
+
 
 $query = "SELECT b.book_id, b.title, b.isbn, bc.copy_id, bc.nfc_uid, bc.status FROM book_copies bc JOIN books b ON bc.book_id = b.book_id ORDER BY bc.copy_id DESC";
 $result = $conn->query($query);
