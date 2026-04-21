@@ -74,6 +74,8 @@ if (isset($_GET['delete'])) {
             <td><?= $row['student_number'] ?></td>
             <td><?= $row['nfc_uid'] ?></td>
             <td>
+                <a href="edit_student.php?id=<?= $row['student_id'] ?>">Edit</a>
+
                 <a href="students.php?delete=<?= $row['student_id'] ?>">Delete</a>
             </td>
         </tr>
