@@ -1,7 +1,7 @@
 <?php
-$host = "168.144.22.111";
+$host = "";
 $user = "exadmin";
-$pass = 'adix123@ZXCVBNM';
+$pass = '';
 $db   = "lbms";
 $port = 3306;
 
