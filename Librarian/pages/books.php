@@ -85,7 +85,9 @@ if (isset($_GET['delete_copy'])) {
 
     $id = $_GET['delete_copy'];
 
-    $conn->query("DELETE FROM book_copies WHERE copy_id = $id");
+    $stmt = $conn->prepare("DELETE FROM book_copies WHERE copy_id = ?");
+    $stmt->bind_param("i", $id);
+    $stmt->execute();
 
     echo "<script>window.location='books.php';</script>";
 }
@@ -186,6 +188,8 @@ $result = $conn->query($query);
                     <td><?= $row['status'] ?></td>
 
                     <td>
+                        <a href="edit_book.php?id=<?= $row['book_id'] ?>">Edit</a>
+
                         <a href="books.php?delete_copy=<?= $row['copy_id'] ?>">Delete Copy</a>
                     </td>
                 </tr>
