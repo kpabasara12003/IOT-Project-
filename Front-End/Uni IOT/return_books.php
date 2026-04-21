@@ -1,67 +1,83 @@
+<?php
+session_start();
+require_once 'db.php';
+
+if (!isset($_SESSION['student_id'])) {
+    header("Location: index.php");
+    exit;
+}
+
+$student_id = $_SESSION['student_id'];
+
+$sql = "SELECT 
+            br.borrow_id, 
+            b.title, 
+            br.due_date,
+            DATEDIFF(CURRENT_DATE, br.due_date) AS overdue_days
+        FROM borrows br
+        JOIN book_copies bc ON br.copy_id = bc.copy_id
+        JOIN books b ON bc.book_id = b.book_id
+        WHERE br.student_id = ? AND br.returned_at IS NULL";
+
+$stmt = $conn->prepare($sql);
+$stmt->bind_param("i", $student_id);
+$stmt->execute();
+$result = $stmt->get_result();
+?>
+
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Return Books</title>
-
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-
   <link rel="stylesheet" href="return_books.css" />
 </head>
-
 <body>
-
   <main class="panel">
     <header class="panel__header">
-      <div class="logo" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-          <path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5z" />
-          <path d="M8 6h8M8 10h8" />
-        </svg>
-      </div>
-    </header>
+        </header>
 
     <section class="panel__body">
       <h1 class="title">Choose the book to<br>Return</h1>
 
       <div class="return-list">
+        <?php if ($result->num_rows > 0): ?>
+            <?php while ($row = $result->fetch_assoc()): 
+                $overdue_days = $row['overdue_days'];
+                $fine = 0;
+                $is_overdue = false;
 
-        <div class="return-row">
-          <div class="book-name">Book 1</div>
+                if ($overdue_days > 0) {
+                    $is_overdue = true;
+                    $fine = $overdue_days * 20;
+                }
+            ?>
+                <div class="return-row">
+                  <div class="book-name"><?php echo htmlspecialchars($row['title']); ?></div>
+                  
+                  <button class="btn btn--returnSmall" type="button"
+                    onclick="window.location.href='return_scan.php?borrow_id=<?php echo $row['borrow_id']; ?>'">
+                    Return
+                  </button>
 
-          <button class="btn btn--returnSmall" type="button"
-            onclick="window.location.href='sd_return.html?book=1'">
-            Return
-          </button>
-
-          <div class="status"></div>
-        </div>
-
-        <div class="return-row">
-          <div class="book-name">Book 2</div>
-
-          <button class="btn btn--returnSmall" type="button"
-            onclick="window.location.href='sd_return.html?book=2'">
-            Return
-          </button>
-
-          <div class="status status--overdue">Status Overdue</div>
-        </div>
-
+                  <?php if ($is_overdue): ?>
+                      <div class="status status--overdue">
+                          Overdue (Fine: LKR <?php echo $fine; ?>)
+                      </div>
+                  <?php else: ?>
+                      <div class="status">Due: <?php echo $row['due_date']; ?></div>
+                  <?php endif; ?>
+                </div>
+            <?php endwhile; ?>
+        <?php else: ?>
+            <p>You have no books to return!</p>
+        <?php endif; ?>
       </div>
     </section>
 
     <footer class="panel__footer">
-      <button class="btn btn--back" type="button" onclick="window.location.href='index.html'">
-        Go Back
-      </button>
+      <button class="btn btn--back" type="button" onclick="window.location.href='SelectOption.php'">Go Back</button>
     </footer>
-
   </main>
-
 </body>
 </html>

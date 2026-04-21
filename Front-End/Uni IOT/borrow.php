@@ -7,7 +7,6 @@ if (!isset($_SESSION['student_id'])) {
     exit;
 }
 
-// Borrowing is allowed only via the Scan & Borrow option
 if (!isset($_SESSION['borrow_entrypoint']) || $_SESSION['borrow_entrypoint'] !== 'scan') {
     http_response_code(403);
     ?>
@@ -51,12 +50,8 @@ if ($scan_value === null || $scan_value === '') {
 }
 
 $error = "";
-
-// Rules
 $borrow_limit = 2;
-$credit_limit = 200;
 
-// Count active borrows for this student (returned_at IS NULL)
 $active_borrows = 0;
 $active_stmt = $conn->prepare("SELECT COUNT(*) AS active_count FROM borrows WHERE student_id = ? AND returned_at IS NULL");
 if ($active_stmt) {
@@ -69,41 +64,55 @@ if ($active_stmt) {
     }
 }
 
-// Credit check from student_accounts (sum credit balances)
-$credit_total = 0.0;
-$credit_stmt = $conn->prepare("
-    SELECT COALESCE(SUM(balance), 0) AS credit_total
-    FROM student_accounts
-    WHERE student_id = ? AND LOWER(type) = 'credit'
-");
+$account_credit = 0.0;
+$credit_stmt = $conn->prepare("SELECT balance, type FROM student_accounts WHERE student_id = ? LIMIT 1");
 if ($credit_stmt) {
     $credit_stmt->bind_param("i", $student_id);
     if ($credit_stmt->execute()) {
         $credit_result = $credit_stmt->get_result();
         if ($credit_row = $credit_result->fetch_assoc()) {
-            $credit_total = (float)$credit_row['credit_total'];
+            $balance = (float)$credit_row['balance'];
+            if (strtolower($credit_row['type']) === 'fine') {
+                $account_credit = -$balance; 
+            } else {
+                $account_credit = $balance;
+            }
         }
     }
 }
 
-$borrow_limit_reached = $active_borrows >= $borrow_limit;
-$credit_limit_reached = $credit_total > $credit_limit;
+$live_fines = 0.0;
+$fine_stmt = $conn->prepare("
+    SELECT SUM(DATEDIFF(CURRENT_DATE, due_date) * 20) AS total_fines
+    FROM borrows
+    WHERE student_id = ? AND returned_at IS NULL AND CURRENT_DATE > due_date
+");
+if ($fine_stmt) {
+    $fine_stmt->bind_param("i", $student_id);
+    if ($fine_stmt->execute()) {
+        $fine_result = $fine_stmt->get_result();
+        if ($fine_row = $fine_result->fetch_assoc()) {
+            $live_fines = (float)$fine_row['total_fines'];
+        }
+    }
+}
 
-// Resolve scanned value to a concrete copy_id + book_id
+$effective_credit = $account_credit - $live_fines;
+
+if ($effective_credit < 0) {
+    $display_balance = "Credit exhausted (LKR " . $effective_credit . ")";
+} else {
+    $display_balance = "Available Credit: LKR " . $effective_credit;
+}
+
+$borrow_limit_reached = $active_borrows >= $borrow_limit;
+$credit_limit_reached = $effective_credit <= 0;
+
 $copy_id = null;
 $book_id = null;
 $scanned_copy_status = null;
 $scanned_specific_copy = false;
 
-// Resolution order (simple + stable):
-// 1) NFC UID match (book_copies.nfc_uid)
-// 2) Numeric copy_id match (book_copies.copy_id)
-// 3) Numeric book_id match (books.book_id) -> pick any available copy
-//
-// Availability is based on book_copies.status (available/borrowed/damaged/etc.).
-// returned_at is used only for the "max 2 books" rule.
-
-// 1) NFC UID match (works for both numeric and non-numeric scan values)
 $resolve_nfc_stmt = $conn->prepare("SELECT copy_id, book_id, status FROM book_copies WHERE nfc_uid = ? LIMIT 1");
 if ($resolve_nfc_stmt) {
     $resolve_nfc_stmt->bind_param("s", $scan_value);
@@ -118,7 +127,6 @@ if ($resolve_nfc_stmt) {
     }
 }
 
-// 2) Numeric copy_id match
 if ($copy_id === null && ctype_digit($scan_value)) {
     $scan_int = (int)$scan_value;
     $resolve_copy_stmt = $conn->prepare("SELECT copy_id, book_id, status FROM book_copies WHERE copy_id = ? LIMIT 1");
@@ -136,7 +144,6 @@ if ($copy_id === null && ctype_digit($scan_value)) {
     }
 }
 
-// 3) Numeric book_id match
 if ($book_id === null && ctype_digit($scan_value)) {
     $scan_int = (int)$scan_value;
     $resolve_book_stmt = $conn->prepare("SELECT book_id FROM books WHERE book_id = ? LIMIT 1");
@@ -157,7 +164,6 @@ if ($book_id === null) {
 
 $scanned_copy_is_available = ($copy_id !== null && $scanned_copy_status !== null && strtolower($scanned_copy_status) === 'available');
 
-// If we did NOT scan a specific copy (book_id flow), pick any available copy.
 if (!$scanned_specific_copy) {
     $copy_stmt = $conn->prepare("SELECT copy_id FROM book_copies WHERE book_id = ? AND LOWER(status) = 'available' LIMIT 1");
     if ($copy_stmt) {
@@ -175,7 +181,6 @@ if ($book_id === null) {
     die("Book not found");
 }
 
-// Load book info for display + available copies count
 $book_sql = "SELECT b.book_id, b.title, c.category_name,
     COALESCE(GROUP_CONCAT(DISTINCT a.author_name SEPARATOR ', '), 'Unknown') AS authors,
     (
@@ -217,7 +222,6 @@ if ($confirm_action && $can_borrow) {
     $insert_stmt->bind_param("iiss", $copy_id, $student_id, $borrowed_at, $due_date);
 
     if ($insert_stmt->execute()) {
-        // Keep book_copies.status in sync (if the column exists in your schema)
         $status_stmt = $conn->prepare("UPDATE book_copies SET status = 'borrowed' WHERE copy_id = ?");
         if ($status_stmt) {
             $status_stmt->bind_param("i", $copy_id);
@@ -231,7 +235,7 @@ if ($confirm_action && $can_borrow) {
     $error = "Unable to confirm borrowing. Please try again.";
 } elseif ($confirm_action && !$can_borrow) {
     if ($credit_limit_reached) {
-        $error = "Credit limit exceeded (over $credit_limit). Please clear your dues before borrowing.";
+        $error = "Borrowing blocked. " . $display_balance . ". Please clear your dues with the librarian.";
     } elseif ($borrow_limit_reached) {
         $error = "Borrow limit reached (max $borrow_limit books at a time). Return a book to borrow again.";
     } elseif ($scanned_specific_copy && !$scanned_copy_is_available && $scanned_copy_status !== null) {
@@ -282,15 +286,15 @@ if ($confirm_action && $can_borrow) {
         <div class="alert alert--error"><?php echo htmlspecialchars($error); ?></div>
       <?php endif; ?>
 
-      <?php if ($borrow_limit_reached): ?>
+      <?php if ($borrow_limit_reached && empty($error)): ?>
         <div class="alert alert--warn">Borrow limit reached (max <?php echo htmlspecialchars((string)$borrow_limit); ?> books).</div>
       <?php endif; ?>
 
-      <?php if ($credit_limit_reached): ?>
-        <div class="alert alert--warn">Credit limit exceeded (over <?php echo htmlspecialchars((string)$credit_limit); ?>). Please clear dues before borrowing.</div>
+      <?php if ($credit_limit_reached && empty($error)): ?>
+        <div class="alert alert--warn">Borrowing blocked. <?php echo $display_balance; ?>. Please clear dues.</div>
       <?php endif; ?>
 
-      <?php if ($no_available_copy): ?>
+      <?php if ($no_available_copy && empty($error)): ?>
         <?php if ($scanned_specific_copy): ?>
           <div class="alert alert--warn">This copy is not available (status: <?php echo htmlspecialchars((string)$scanned_copy_status); ?>).</div>
         <?php else: ?>
@@ -322,6 +326,12 @@ if ($confirm_action && $can_borrow) {
         <div class="summary-row">
           <span>Due Date</span>
           <strong><?php echo htmlspecialchars($due_date); ?></strong>
+        </div>
+        <div class="summary-row">
+          <span>Current Credit</span>
+          <strong style="color: <?php echo $effective_credit < 0 ? '#EDAFB8' : '#B0C4B1'; ?>;">
+            LKR <?php echo $effective_credit; ?>
+          </strong>
         </div>
       </div>
 
