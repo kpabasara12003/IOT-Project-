@@ -158,9 +158,92 @@ if ($book_id === null && ctype_digit($scan_value)) {
     }
 }
 
+
 if ($book_id === null) {
-    die("Book not found");
+    echo '<!doctype html>
+    <html lang="en">
+    <head>
+      <meta charset="utf-8" />
+      <meta name="viewport" content="width=device-width,initial-scale=1" />
+      <title>Book Not Found</title>
+      <style>
+        * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+        }
+        body {
+          font-family: "Inter", sans-serif;
+          background: #F6F8FC;
+          --bg: #F6F8FC;
+          --surface: #FFFFFF;
+          --surface-2: #F2F5FB;
+          --text: #0F172A;
+          --muted: #64748B;
+          --border: #E2E8F0;
+          min-height: 100vh;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 20px;
+        }
+        .warning-container {
+          background: var(--surface);
+          border-radius: 24px;
+          padding: 40px;
+          max-width: 500px;
+          width: 100%;
+          text-align: center;
+          box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05);
+          border: 1px solid var(--border);
+        }
+        .warning-icon {
+          font-size: 64px;
+          margin-bottom: 20px;
+        }
+        .warning-title {
+          color: var(--text);
+          font-size: 24px;
+          font-weight: 700;
+          margin-bottom: 12px;
+        }
+        .warning-message {
+          color: var(--muted);
+          font-size: 16px;
+          margin-bottom: 30px;
+          line-height: 1.5;
+        }
+        .btn-go-back {
+          display: inline-block;
+          background: #0F172A;
+          color: white;
+          text-decoration: none;
+          padding: 12px 32px;
+          border-radius: 40px;
+          font-weight: 600;
+          font-size: 16px;
+          transition: all 0.2s ease;
+          border: none;
+          cursor: pointer;
+        }
+        .btn-go-back:hover {
+          background: #1e293b;
+          transform: translateY(-1px);
+        }
+      </style>
+    </head>
+    <body>
+      <div class="warning-container">
+        <div class="warning-icon"></div>
+        <h1 class="warning-title">Book Not Found</h1>
+        <p class="warning-message">The book you are trying to access could not be found in the system.</p>
+        <a href="./bscanescreen.php" class="btn-go-back"> Go Back to Scan</a>
+      </div>
+    </body>
+    </html>';
+    exit;
 }
+?>
 
 $scanned_copy_is_available = ($copy_id !== null && $scanned_copy_status !== null && strtolower($scanned_copy_status) === 'available');
 

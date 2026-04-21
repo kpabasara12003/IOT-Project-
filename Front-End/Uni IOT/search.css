@@ -139,7 +139,7 @@ body{
 
 .table tbody td{
   height: 52px;
-  font-size: 14px;
+  font-size: 15px;
   color: rgba(15,23,42,0.75);
 }
 
@@ -185,7 +185,20 @@ body{
 .btn--search:hover{
   background-color: rgba(29,78,216,0.14);
 }
+.btn--view {
+  background-color: #053f5d;
+  color: #fff; 
+  padding: 10px 20px;
+  border: none; 
+  border-radius: 5px; 
+  font-size: 16px; 
+  cursor: pointer; 
+}
 
+.btn--view:hover {
+  background-color: #026907;
+  transform: scale(1.05); 
+}
 @media (max-width: 420px){
   .panel__body{ padding: 28px 16px 22px; }
   .title{ font-size: 30px; }

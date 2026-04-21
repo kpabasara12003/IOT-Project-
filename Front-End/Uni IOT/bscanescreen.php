@@ -65,15 +65,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
       </div>
 
-      <form class="scan-form" method="POST">
+      <form class="scan-form" method="POST" id="scanForm">
         <input
           type="text"
           name="book_id"
-          placeholder="Enter / Scan Book ID"
+          id="book_id"
+          style="opacity: 0; position: absolute; top: -100px; left: -100px; height: 1px; width: 1px;"
           autocomplete="off"
           autofocus
         >
-        <button class="btn btn--scan" type="submit">Scan</button>
+        <button class="btn btn--scan" type="submit" id="submitBtn" style="display: none;">Scan</button>
       </form>
 
       <?php if (!empty($error)): ?>
@@ -86,6 +87,100 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <div class="hint">Tap the book / scan area to continue</div>
     </footer>
   </main>
+
+  <script>
+    const bookIdInput = document.getElementById('book_id');
+    const scanForm = document.getElementById('scanForm');
+    
+    let statusTimeout;
+    
+    let scanStatusDiv = document.querySelector('.scan-error');
+    if (!scanStatusDiv) {
+      scanStatusDiv = document.createElement('div');
+      scanStatusDiv.className = 'scan-error';
+      const panelBody = document.querySelector('.panel__body--scan');
+      if (panelBody) {
+        const formElement = document.querySelector('.scan-form');
+        if (formElement && formElement.nextSibling) {
+          panelBody.insertBefore(scanStatusDiv, formElement.nextSibling);
+        } else {
+          panelBody.appendChild(scanStatusDiv);
+        }
+      }
+    }
+    
+    function showStatusMessage(message, isError = false) {
+      if (scanStatusDiv) {
+        scanStatusDiv.textContent = message;
+        scanStatusDiv.style.color = isError ? '#e74c3c' : '#27ae60';
+        
+        if (statusTimeout) {
+          clearTimeout(statusTimeout);
+        }
+        
+        statusTimeout = setTimeout(() => {
+          if (scanStatusDiv) {
+            scanStatusDiv.textContent = '';
+          }
+        }, 3000);
+      }
+    }
+    
+    bookIdInput.addEventListener('input', function(e) {
+      const scannedValue = this.value.trim();
+      
+      if (scannedValue !== '') {
+        setTimeout(() => {
+          const currentValue = bookIdInput.value.trim();
+          if (currentValue !== '') {
+            console.log('Book ID scanned:', currentValue);
+            showStatusMessage(' Book detected Processing...', false);
+            // Automatically submit the form
+            scanForm.submit();
+          }
+        }, 50);
+      }
+    });
+    
+    bookIdInput.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const scannedValue = this.value.trim();
+        if (scannedValue !== '') {
+          console.log('Book ID scanned (Enter):', scannedValue);
+          showStatusMessage(' Book detected Processing...', false);
+          scanForm.submit();
+        }
+      }
+    });
+    
+    window.addEventListener('load', function() {
+      bookIdInput.focus();
+      if (scanStatusDiv) {
+        scanStatusDiv.textContent = 'Ready to scan book...';
+        scanStatusDiv.style.color = '#4A5759';
+        setTimeout(() => {
+          if (scanStatusDiv && scanStatusDiv.textContent === 'Ready to scan book...') {
+            scanStatusDiv.textContent = '';
+          }
+        }, 3000);
+      }
+    });
+    
+    const panelBody = document.querySelector('.panel__body--scan');
+    if (panelBody) {
+      panelBody.addEventListener('click', function() {
+        bookIdInput.focus();
+      });
+    }
+    
+    scanForm.addEventListener('submit', function(e) {
+      if (bookIdInput.value.trim() === '') {
+        e.preventDefault();
+        showStatusMessage('✗ Please scan a book first.', true);
+        bookIdInput.focus();
+      }
+    });
+  </script>
 </body>
 </html>
-

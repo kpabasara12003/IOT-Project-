@@ -121,7 +121,9 @@ $results = $stmt->get_result();
 
         <td>
           <a href="bookdetails.php?id=<?php echo $row['book_id']; ?>">
-            <button type="button">View</button>
+            <button class="btn--view" type="button" style=" background-color: #033851; color: #fff; padding: 5px 10px; 
+              border: none; border-radius: 5px; font-size: 16px; cursor: pointer; 
+              transition: all 0.3s ease;" onmouseout="this.style.backgroundColor='#4CAF50'; this.style.transform='scale(1)';">View</button>
           </a>
         </td>
       </tr>
