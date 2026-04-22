@@ -6,13 +6,13 @@ use PHPMailer\PHPMailer\Exception;
 require_once 'vendor/autoload.php';  
 
 $email_config = [
-    'host'       => '',
-    'username'   => '',     
-    'password'   => '',        
+    'host'       => 'smtp.gmail.com',
+    'username'   => 'kusumindapabasara@gmail.com',     
+    'password'   => 'dhut ayuu ucir jmxr',        
     'port'       => 587,
     'encryption' => PHPMailer::ENCRYPTION_STARTTLS, 
-    'from_email' => '',
-    'from_name'  => ''
+    'from_email' => 'kusumindapabasara@gmail.com',
+    'from_name'  => 'LBMS'
 ];
 
 function sendVerificationCode($email, $code, $student_name) {
